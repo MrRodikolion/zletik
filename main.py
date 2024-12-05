@@ -22,6 +22,7 @@ dron.streamon()
 steam = dron.get_frame_read()
 
 mahine_detect = Event()
+mahine_go = Event()
 running = Event()
 running.set()
 
@@ -31,61 +32,64 @@ mahine_centr = (0, 0)
 
 svframe = None
 
+
+
 def dron_thread():
     global xy
-    # dron.takeoff()
+    dron.takeoff()
 
     dh = dron.get_distance_tof()
     to_go = 150 - dh
-    # if to_go >= 20:med(0, 0, to_go, 30)
+    if to_go >= 20:
+        dron.go_xyz_speed(0, 0, to_go, 30)
     dh = dron.get_distance_tof()
     while running.is_set():
         print('start')
-        # dgo = (int(0.2 * CUBE_SIDE) - xy[0], -int(0.2 * CUBE_SIDE) - xy[1])
-        # dron.go_xyz_speed(dgo[0], dgo[1], 0, 30)
-        # xy = (xy[0] + dgo[0], xy[1] + dgo[1])
+        dgo = (int(0.2 * CUBE_SIDE) - xy[0], -int(0.2 * CUBE_SIDE) - xy[1])
+        dron.go_xyz_speed(dgo[0], dgo[1], 0, 30)
+        xy = (xy[0] + dgo[0], xy[1] + dgo[1])
         print('cube')
         while not mahine_detect.is_set():
-            sleep(2)
-            # dgo = (MINI_CUBE_SIDE, 0)
-            # dron.go_xyz_speed(dgo[0], dgo[1], 0, 30)
-            # xy = (xy[0] + dgo[0], xy[1] + dgo[1])
-            # if mahine_detect.is_set():
-            #     break
-            #
-            # dgo = (0, -MINI_CUBE_SIDE)
-            # dron.go_xyz_speed(dgo[0], dgo[1], 0, 30)
-            # xy = (xy[0] + dgo[0], xy[1] + dgo[1])
-            # if mahine_detect.is_set():
-            #     break
-            #
-            # dgo = (-MINI_CUBE_SIDE, 0)
-            # dron.go_xyz_speed(dgo[0], dgo[1], 0, 30)
-            # xy = (xy[0] + dgo[0], xy[1] + dgo[1])
-            # if mahine_detect.is_set():
-            #     break
-            #
-            # dgo = (0, MINI_CUBE_SIDE)
-            # dron.go_xyz_speed(dgo[0], dgo[1], 0, 30)
-            # xy = (xy[0] + dgo[0], xy[1] + dgo[1])
-            # if mahine_detect.is_set():
-            #     break
+            # sleep(2)
+            dgo = (MINI_CUBE_SIDE, 0)
+            dron.go_xyz_speed(dgo[0], dgo[1], 0, 30)
+            xy = (xy[0] + dgo[0], xy[1] + dgo[1])
+            if mahine_detect.is_set():
+                break
+
+            dgo = (0, -MINI_CUBE_SIDE)
+            dron.go_xyz_speed(dgo[0], dgo[1], 0, 30)
+            xy = (xy[0] + dgo[0], xy[1] + dgo[1])
+            if mahine_detect.is_set():
+                break
+
+            dgo = (-MINI_CUBE_SIDE, 0)
+            dron.go_xyz_speed(dgo[0], dgo[1], 0, 30)
+            xy = (xy[0] + dgo[0], xy[1] + dgo[1])
+            if mahine_detect.is_set():
+                break
+
+            dgo = (0, MINI_CUBE_SIDE)
+            dron.go_xyz_speed(dgo[0], dgo[1], 0, 30)
+            xy = (xy[0] + dgo[0], xy[1] + dgo[1])
+            if mahine_detect.is_set():
+                break
 
         print('go machine')
         out = cv2.VideoWriter('out.avi', cv2.VideoWriter_fourcc(*'MJPG'), 30, (640, 480))
         while mahine_detect.is_set():
-            print()
-            out.write(svframe)
-            dgo = (-(mahine_centr[0] - 320) * 0.23,
-                   -(mahine_centr[1] - 240) * 0.23)
-            dgo = (int(dgo[1]) if abs(dgo[1]) >= 20 else 0,
-                   int(dgo[0]) if abs(dgo[0]) >= 20 else 0)
-            print(mahine_centr)
-            print(dgo)
-            print(xy)
-            # dron.go_xyz_speed(dgo[0], dgo[1], 0, 30)
-            xy = (xy[0] + dgo[0], xy[1] + dgo[1])
-            sleep(1)
+            if mahine_go.is_set():
+                out.write(svframe)
+                sleep(1)
+                dgo = ((mahine_centr[0] - 320) * 0.23,
+                       -(mahine_centr[1] - 240) * 0.23)
+                dgo = (int(dgo[1]) if abs(dgo[1]) >= 20 else 0,
+                       int(dgo[0]) if abs(dgo[0]) >= 20 else 0)
+                print(xy)
+                dron.go_xyz_speed(dgo[0], dgo[1], 0, 30)
+                xy = (xy[0] + dgo[0], xy[1] + dgo[1])
+                sleep(1)
+                mahine_go.clear()
         out.release()
     time.sleep(5)
     dron.land()
@@ -115,6 +119,7 @@ def cam_thread():
                 cv2.rectangle(frame, rect[:2], rect[2:], (0, 0, 255), 2)
                 cv2.circle(frame, mahine_centr, 4, (0, 0, 255), -1)
                 mahine_detect.set()
+                mahine_go.set()
                 t_detect = time()
                 break
 
